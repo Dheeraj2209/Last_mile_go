@@ -1,0 +1,36 @@
+Minimal Go stack (updated)
+
+  - Go 1.22
+  - gRPC: grpc-go
+  - Codegen: buf (protos + breaking/linters)
+  - REST/OpenAPI: grpc-gateway + protoc-gen-openapiv2
+  - Telemetry: OpenTelemetry (traces + metrics)
+  - Logs: Loki + Grafana
+  - DB: MongoDB
+  - Cache: Redis
+  - Secrets: Vault + External Secrets Operator
+  - K8s: vanilla manifests + HPA
+
+
+# i need to discuss file structure for the new repo
+
+keep it (recommended minimal path)
+
+  - React + Vite + Tailwind stays exactly the same.
+  - It talks to the REST API exposed by grpc-gateway.
+  - Only change needed: update the base API URL and any field names if your proto/JSON differs.
+
+  Why keep TS frontend?
+
+  - Faster UI iteration than Go web templates.
+  - Keeps the project structure familiar and already matches your use case.
+  - Go backend is orthogonal to the frontend; you just swap the gateway implementation.
+
+  Optionally modernize
+
+  - Generate TypeScript clients from OpenAPI:
+      - Use openapi-typescript or openapi-generator to avoid hand‑written API wrappers.
+  - That way your frontend stays type‑safe even as proto changes.
+
+
+# not to self(the codex user) - also go to spe-final-project (koushiks implementation ) to retrive codex thread containing further ideas.
