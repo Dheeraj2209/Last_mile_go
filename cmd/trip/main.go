@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,12 +24,14 @@ func main() {
 	var httpAddr string
 	var otelEndpoint string
 	var otelInsecure bool
+	var logLevel string
 
 	flag.StringVar(&grpcListenAddr, "grpc-listen", cfg.GRPCListenAddr, "gRPC listen address")
 	flag.StringVar(&grpcEndpoint, "grpc-endpoint", cfg.GRPCEndpoint, "gRPC endpoint for gateway dialing")
 	flag.StringVar(&httpAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	flag.StringVar(&otelEndpoint, "otel-endpoint", cfg.OTelEndpoint, "OTel OTLP gRPC endpoint (host:port)")
 	flag.BoolVar(&otelInsecure, "otel-insecure", cfg.OTelInsecure, "Disable TLS for OTLP exporter")
+	flag.StringVar(&logLevel, "log-level", cfg.LogLevel, "Log level (debug, info, warn, error)")
 	flag.Parse()
 
 	cfg.GRPCListenAddr = grpcListenAddr
@@ -38,30 +39,32 @@ func main() {
 	cfg.HTTPAddr = httpAddr
 	cfg.OTelEndpoint = otelEndpoint
 	cfg.OTelInsecure = otelInsecure
+	cfg.LogLevel = logLevel
 
+	logger := observability.ConfigureLogger(cfg.ServiceName, cfg.LogLevel)
 	if err := config.Validate(cfg); err != nil {
-		log.Fatalf("trip invalid configuration: %v", err)
+		logger.Fatal().Err(err).Msg("invalid configuration")
 	}
-	log.Printf("trip config: %s", config.FormatConfig(cfg))
+	logger.Info().Str("config", config.FormatConfig(cfg)).Msg("service config")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	shutdownOTel, err := observability.Setup(ctx, cfg.ServiceName, cfg.OTelEndpoint, cfg.OTelInsecure)
 	if err != nil {
-		log.Fatalf("trip service failed to init telemetry: %v", err)
+		logger.Fatal().Err(err).Msg("failed to init telemetry")
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := shutdownOTel(shutdownCtx); err != nil {
-			log.Printf("trip telemetry shutdown error: %v", err)
+			logger.Error().Err(err).Msg("telemetry shutdown error")
 		}
 	}()
 
-	ready, err := server.ReadyChecksFromConfig(ctx, cfg, log.Printf)
+	ready, err := server.ReadyChecksFromConfig(ctx, cfg, observability.Logf())
 	if err != nil {
-		log.Fatalf("trip readiness init failed: %v", err)
+		logger.Fatal().Err(err).Msg("readiness init failed")
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -71,7 +74,7 @@ func main() {
 				continue
 			}
 			if err := closer(shutdownCtx); err != nil {
-				log.Printf("trip readiness close error: %v", err)
+				logger.Error().Err(err).Msg("readiness close error")
 			}
 		}
 	}()
@@ -84,6 +87,6 @@ func main() {
 		ready.Checks...,
 	)
 	if err != nil {
-		log.Fatalf("trip service stopped: %v", err)
+		logger.Fatal().Err(err).Msg("service stopped")
 	}
 }

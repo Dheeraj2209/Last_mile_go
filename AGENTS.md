@@ -42,6 +42,7 @@ Runtime configuration (env or flags):
 - `HTTP_ADDR` / `--http-addr` (default `:8080`)
 - `OTEL_EXPORTER_OTLP_ENDPOINT` / `--otel-endpoint` (default empty, enables OTLP)
 - `OTEL_EXPORTER_OTLP_INSECURE` / `--otel-insecure` (default `true`)
+- `LOG_LEVEL` / `--log-level` (default `info`)
 - `.env.example` contains local defaults (copy to `.env` if needed).
 Note: `.env` usage is optional for now; can be added later if needed.
 
@@ -67,11 +68,14 @@ CI:
 - GitHub Actions workflow runs `gofmt -l`, `buf lint`, `make proto`, and `go test ./...`.
 
 ## Next Build Steps (choose one)
-- Add structured logging (zap/zerolog) with request + trace IDs.
+- Wire Mongo/Redis-backed repositories for User/Station (feature-flag via env).
+- Add Dockerfiles + Kubernetes manifests for Station (mirror user), then for remaining services.
+- Add a local dev `docker-compose` (Mongo, Redis, OTEL collector) and document usage.
 
 Observability:
 - gRPC uses OpenTelemetry stats handler + logging interceptors.
 - HTTP requests are wrapped with tracing + access logs.
+- Structured logs include request IDs + trace IDs; HTTP echoes `X-Request-Id`, gRPC headers include `x-request-id`.
 
 Minimal service logic (in-memory):
 - `UserService` supports Create/Get for rider and driver profiles (IDs auto-generated if missing).
@@ -80,7 +84,7 @@ Minimal service logic (in-memory):
 - User/Station default to in-memory storage interfaces in `internal/storage` (swappable for real backends).
 
 ## Next Steps (quality-first)
-- Add structured logging (zap/zerolog) with request IDs and trace IDs.
+- Add a small smoke-test script (grpcurl + curl) and document expected outputs.
 
 ## Coding Style & Naming Conventions
 Use standard formatters (`gofmt`, `prettier`) and keep service names aligned to the spec (`user`, `driver`, `rider`, `matching`, `trip`, `notification`, `location`, `station`). Prefer lowercase directory names such as `services/rider/`.

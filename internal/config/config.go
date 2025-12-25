@@ -17,6 +17,7 @@ type Config struct {
 	HTTPAddr       string
 	OTelEndpoint   string
 	OTelInsecure   bool
+	LogLevel       string
 
 	Mongo storage.MongoConfig
 	Redis storage.RedisConfig
@@ -30,6 +31,7 @@ func Load(serviceName string) Config {
 		HTTPAddr:       getEnv("HTTP_ADDR", ":8080"),
 		OTelEndpoint:   os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 		OTelInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+		LogLevel:       getEnv("LOG_LEVEL", "info"),
 		Mongo: storage.MongoConfig{
 			URI:     os.Getenv("MONGO_URI"),
 			Timeout: getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
@@ -114,12 +116,13 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 }
 
 func FormatConfig(cfg Config) string {
-	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t mongo_uri_set=%t redis_addr_set=%t",
+	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t log_level=%s mongo_uri_set=%t redis_addr_set=%t",
 		cfg.GRPCListenAddr,
 		cfg.GRPCEndpoint,
 		cfg.HTTPAddr,
 		cfg.OTelEndpoint,
 		cfg.OTelInsecure,
+		cfg.LogLevel,
 		cfg.Mongo.URI != "",
 		cfg.Redis.Addr != "",
 	)
