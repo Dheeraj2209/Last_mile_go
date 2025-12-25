@@ -47,6 +47,8 @@ Note: `.env` usage is optional for now; can be added later if needed.
 Storage configuration (optional until services wire them in):
 - `MONGO_URI`, `MONGO_TIMEOUT` (default `10s`)
 - `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (default `0`), `REDIS_TIMEOUT` (default `5s`)
+Storage clients:
+- `NewMongoClient` / `NewRedisClient` return errors when required fields are missing. Services should call them only when they actually need the dependency.
 
 Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
@@ -64,6 +66,10 @@ No build/test/run scripts exist yet for services. Once code lands, keep a minima
 Observability:
 - gRPC uses OpenTelemetry stats handler + logging interceptors.
 - HTTP requests are wrapped with tracing + access logs.
+
+Minimal service logic (in-memory):
+- `UserService` supports Create/Get for rider and driver profiles (IDs auto-generated if missing).
+- `StationService` supports Upsert/Get/List with simple offset pagination (`page_token` as offset string).
 
 ## Coding Style & Naming Conventions
 Use standard formatters (`gofmt`, `prettier`) and keep service names aligned to the spec (`user`, `driver`, `rider`, `matching`, `trip`, `notification`, `location`, `station`). Prefer lowercase directory names such as `services/rider/`.
