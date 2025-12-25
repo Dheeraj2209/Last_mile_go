@@ -64,7 +64,7 @@ Docker build (user service):
 
 No build/test/run scripts exist yet for services. Once code lands, keep a minimal command surface (for example, `make build`, `make test`, `make run`) and document the exact commands here.
 CI:
-- GitHub Actions workflow runs `gofmt -l`, `buf lint`, and `go test ./...`.
+- GitHub Actions workflow runs `gofmt -l`, `buf lint`, `make proto`, and `go test ./...`.
 
 ## Next Build Steps (choose one)
 - Add structured logging (zap/zerolog) with request + trace IDs.

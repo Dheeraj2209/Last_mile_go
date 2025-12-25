@@ -18,10 +18,17 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: 1.50.0
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install buf + plugins
+        run: |
+          go install github.com/bufbuild/buf/cmd/buf@v1.50.0
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Go fmt check
         run: |
@@ -39,6 +46,9 @@ jobs:
       - name: Buf lint
         working-directory: api
         run: buf lint
+
+      - name: Buf generate
+        run: make proto
 
       - name: Go test
         run: go test ./...
