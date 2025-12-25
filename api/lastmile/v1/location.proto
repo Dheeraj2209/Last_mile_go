@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "lastmile/v1/common.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+service LocationService {
+  rpc UpdateDriverLocation(UpdateDriverLocationRequest) returns (UpdateDriverLocationResponse) {
+    option (google.api.http) = {
+      post: "/v1/locations/drivers/{driver_id}"
+      body: "location_update"
+    };
+  }
+
+  rpc GetDriverLocation(GetDriverLocationRequest) returns (GetDriverLocationResponse) {
+    option (google.api.http) = {
+      get: "/v1/locations/drivers/{driver_id}"
+    };
+  }
+}
+
+message UpdateDriverLocationRequest {
+  string driver_id = 1;
+  LocationUpdate location_update = 2;
+}
+
+message UpdateDriverLocationResponse {
+  LocationUpdate location_update = 1;
+}
+
+message GetDriverLocationRequest {
+  string driver_id = 1;
+}
+
+message GetDriverLocationResponse {
+  LocationUpdate location_update = 1;
+}

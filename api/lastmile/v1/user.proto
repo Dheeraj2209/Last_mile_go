@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "lastmile/v1/common.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+service UserService {
+  rpc CreateRiderProfile(CreateRiderProfileRequest) returns (CreateRiderProfileResponse) {
+    option (google.api.http) = {
+      post: "/v1/riders"
+      body: "profile"
+    };
+  }
+
+  rpc CreateDriverProfile(CreateDriverProfileRequest) returns (CreateDriverProfileResponse) {
+    option (google.api.http) = {
+      post: "/v1/drivers"
+      body: "profile"
+    };
+  }
+
+  rpc GetRiderProfile(GetRiderProfileRequest) returns (GetRiderProfileResponse) {
+    option (google.api.http) = {
+      get: "/v1/riders/{rider_id}"
+    };
+  }
+
+  rpc GetDriverProfile(GetDriverProfileRequest) returns (GetDriverProfileResponse) {
+    option (google.api.http) = {
+      get: "/v1/drivers/{driver_id}"
+    };
+  }
+}
+
+message CreateRiderProfileRequest {
+  RiderProfile profile = 1;
+}
+
+message CreateRiderProfileResponse {
+  RiderProfile profile = 1;
+}
+
+message CreateDriverProfileRequest {
+  DriverProfile profile = 1;
+}
+
+message CreateDriverProfileResponse {
+  DriverProfile profile = 1;
+}
+
+message GetRiderProfileRequest {
+  string rider_id = 1;
+}
+
+message GetRiderProfileResponse {
+  RiderProfile profile = 1;
+}
+
+message GetDriverProfileRequest {
+  string driver_id = 1;
+}
+
+message GetDriverProfileResponse {
+  DriverProfile profile = 1;
+}

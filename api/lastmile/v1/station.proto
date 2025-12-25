@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "lastmile/v1/common.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+service StationService {
+  rpc UpsertStation(UpsertStationRequest) returns (UpsertStationResponse) {
+    option (google.api.http) = {
+      put: "/v1/stations/{station.station_id}"
+      body: "station"
+    };
+  }
+
+  rpc GetStation(GetStationRequest) returns (GetStationResponse) {
+    option (google.api.http) = {
+      get: "/v1/stations/{station_id}"
+    };
+  }
+
+  rpc ListStations(ListStationsRequest) returns (ListStationsResponse) {
+    option (google.api.http) = {
+      get: "/v1/stations"
+    };
+  }
+}
+
+message UpsertStationRequest {
+  Station station = 1;
+}
+
+message UpsertStationResponse {
+  Station station = 1;
+}
+
+message GetStationRequest {
+  string station_id = 1;
+}
+
+message GetStationResponse {
+  Station station = 1;
+}
+
+message ListStationsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListStationsResponse {
+  repeated Station stations = 1;
+  string next_page_token = 2;
+}

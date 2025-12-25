@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+enum RideStatus {
+  RIDE_STATUS_UNSPECIFIED = 0;
+  RIDE_STATUS_PENDING = 1;
+  RIDE_STATUS_MATCHED = 2;
+  RIDE_STATUS_PICKED_UP = 3;
+  RIDE_STATUS_DROPPED_OFF = 4;
+  RIDE_STATUS_CANCELED = 5;
+}
+
+message RideRequest {
+  string request_id = 1;
+  string rider_id = 2;
+  string station_id = 3;
+  string destination_id = 4;
+  google.protobuf.Timestamp arrival_time = 5;
+  RideStatus status = 6;
+}
+
+service RiderService {
+  rpc CreateRideRequest(CreateRideRequestRequest) returns (CreateRideRequestResponse) {
+    option (google.api.http) = {
+      post: "/v1/riders/{rider_id}/requests"
+      body: "request"
+    };
+  }
+
+  rpc GetRideRequest(GetRideRequestRequest) returns (GetRideRequestResponse) {
+    option (google.api.http) = {
+      get: "/v1/riders/{rider_id}/requests/{request_id}"
+    };
+  }
+
+  rpc UpdateRideStatus(UpdateRideStatusRequest) returns (UpdateRideStatusResponse) {
+    option (google.api.http) = {
+      patch: "/v1/riders/{rider_id}/requests/{request_id}"
+      body: "request"
+    };
+  }
+}
+
+message CreateRideRequestRequest {
+  string rider_id = 1;
+  RideRequest request = 2;
+}
+
+message CreateRideRequestResponse {
+  RideRequest request = 1;
+}
+
+message GetRideRequestRequest {
+  string rider_id = 1;
+  string request_id = 2;
+}
+
+message GetRideRequestResponse {
+  RideRequest request = 1;
+}
+
+message UpdateRideStatusRequest {
+  string rider_id = 1;
+  string request_id = 2;
+  RideRequest request = 3;
+}
+
+message UpdateRideStatusResponse {
+  RideRequest request = 1;
+}

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+message LatLng {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Station {
+  string station_id = 1;
+  string name = 2;
+  LatLng location = 3;
+  repeated string nearby_area_ids = 4;
+}
+
+message Destination {
+  string destination_id = 1;
+  string name = 2;
+  LatLng location = 3;
+}
+
+message Route {
+  string route_id = 1;
+  string name = 2;
+  repeated string station_ids = 3;
+  Destination destination = 4;
+}
+
+message RiderProfile {
+  string rider_id = 1;
+  string name = 2;
+  string phone = 3;
+}
+
+message DriverProfile {
+  string driver_id = 1;
+  string name = 2;
+  string phone = 3;
+  string vehicle_id = 4;
+}
+
+message LocationUpdate {
+  string driver_id = 1;
+  LatLng location = 2;
+  google.protobuf.Timestamp observed_at = 3;
+}
+
+message SeatAvailability {
+  string driver_id = 1;
+  int32 available_seats = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+enum TripStatus {
+  TRIP_STATUS_UNSPECIFIED = 0;
+  TRIP_STATUS_SCHEDULED = 1;
+  TRIP_STATUS_ACTIVE = 2;
+  TRIP_STATUS_COMPLETED = 3;
+  TRIP_STATUS_CANCELED = 4;
+}
+
+message Trip {
+  string trip_id = 1;
+  string rider_id = 2;
+  string driver_id = 3;
+  string station_id = 4;
+  string destination_id = 5;
+  TripStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "lastmile/v1/common.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+service TripService {
+  rpc CreateTrip(CreateTripRequest) returns (CreateTripResponse) {
+    option (google.api.http) = {
+      post: "/v1/trips"
+      body: "trip"
+    };
+  }
+
+  rpc GetTrip(GetTripRequest) returns (GetTripResponse) {
+    option (google.api.http) = {
+      get: "/v1/trips/{trip_id}"
+    };
+  }
+
+  rpc UpdateTripStatus(UpdateTripStatusRequest) returns (UpdateTripStatusResponse) {
+    option (google.api.http) = {
+      patch: "/v1/trips/{trip_id}"
+      body: "trip"
+    };
+  }
+}
+
+message CreateTripRequest {
+  Trip trip = 1;
+}
+
+message CreateTripResponse {
+  Trip trip = 1;
+}
+
+message GetTripRequest {
+  string trip_id = 1;
+}
+
+message GetTripResponse {
+  Trip trip = 1;
+}
+
+message UpdateTripStatusRequest {
+  string trip_id = 1;
+  Trip trip = 2;
+}
+
+message UpdateTripStatusResponse {
+  Trip trip = 1;
+}

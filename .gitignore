@@ -1,0 +1,20 @@
+# Go build
+bin/
+*.exe
+*.test
+*.out
+
+# Generated code & specs
+gen/go/
+gen/openapi/
+
+# Tooling
+.buf/
+
+# Project docs (kept out of VCS in this repo)
+project-statement/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

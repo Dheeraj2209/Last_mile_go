@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+message MatchAssignment {
+  string rider_id = 1;
+  string driver_id = 2;
+  string trip_id = 3;
+}
+
+message MatchRun {
+  string match_id = 1;
+  string station_id = 2;
+  google.protobuf.Timestamp match_time = 3;
+  repeated MatchAssignment assignments = 4;
+}
+
+service MatchingService {
+  rpc RunMatching(RunMatchingRequest) returns (RunMatchingResponse) {
+    option (google.api.http) = {
+      post: "/v1/matching:run"
+      body: "*"
+    };
+  }
+}
+
+message RunMatchingRequest {
+  string station_id = 1;
+  google.protobuf.Timestamp match_time = 2;
+}
+
+message RunMatchingResponse {
+  MatchRun match = 1;
+}

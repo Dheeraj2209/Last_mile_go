@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package lastmile.v1;
+
+import "google/api/annotations.proto";
+import "lastmile/v1/common.proto";
+
+option go_package = "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1;lastmilev1";
+
+service DriverService {
+  rpc RegisterRoute(RegisterRouteRequest) returns (RegisterRouteResponse) {
+    option (google.api.http) = {
+      post: "/v1/drivers/{driver_id}/routes"
+      body: "route"
+    };
+  }
+
+  rpc UpdateSeatAvailability(UpdateSeatAvailabilityRequest) returns (UpdateSeatAvailabilityResponse) {
+    option (google.api.http) = {
+      patch: "/v1/drivers/{driver_id}/seats"
+      body: "availability"
+    };
+  }
+
+  rpc UpdateDriverLocation(DriverServiceUpdateDriverLocationRequest) returns (DriverServiceUpdateDriverLocationResponse) {
+    option (google.api.http) = {
+      post: "/v1/drivers/{driver_id}/location"
+      body: "location_update"
+    };
+  }
+
+  rpc GetDriverRoute(GetDriverRouteRequest) returns (GetDriverRouteResponse) {
+    option (google.api.http) = {
+      get: "/v1/drivers/{driver_id}/routes/{route_id}"
+    };
+  }
+}
+
+message RegisterRouteRequest {
+  string driver_id = 1;
+  Route route = 2;
+}
+
+message RegisterRouteResponse {
+  Route route = 1;
+}
+
+message UpdateSeatAvailabilityRequest {
+  string driver_id = 1;
+  SeatAvailability availability = 2;
+}
+
+message UpdateSeatAvailabilityResponse {
+  SeatAvailability availability = 1;
+}
+
+message DriverServiceUpdateDriverLocationRequest {
+  string driver_id = 1;
+  LocationUpdate location_update = 2;
+}
+
+message DriverServiceUpdateDriverLocationResponse {
+  LocationUpdate location_update = 1;
+}
+
+message GetDriverRouteRequest {
+  string driver_id = 1;
+  string route_id = 2;
+}
+
+message GetDriverRouteResponse {
+  Route route = 1;
+}
