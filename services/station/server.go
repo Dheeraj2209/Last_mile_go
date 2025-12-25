@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"math"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	lastmilev1 "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1"
@@ -28,8 +30,19 @@ func (s *Server) UpsertStation(_ context.Context, req *lastmilev1.UpsertStationR
 		return nil, status.Error(codes.InvalidArgument, "station is required")
 	}
 	station := cloneStation(req.Station)
-	if station.StationId == "" {
+	station.Name = strings.TrimSpace(station.Name)
+	if station.Name == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+	if err := validateLatLng(station.Location); err != nil {
+		return nil, err
+	}
+
+	stationID := strings.TrimSpace(station.StationId)
+	if stationID == "" {
 		station.StationId = newID("station")
+	} else {
+		station.StationId = stationID
 	}
 
 	s.mu.Lock()
@@ -40,12 +53,12 @@ func (s *Server) UpsertStation(_ context.Context, req *lastmilev1.UpsertStationR
 }
 
 func (s *Server) GetStation(_ context.Context, req *lastmilev1.GetStationRequest) (*lastmilev1.GetStationResponse, error) {
-	if req == nil || req.StationId == "" {
+	if req == nil || strings.TrimSpace(req.StationId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "station_id is required")
 	}
 
 	s.mu.RLock()
-	station, ok := s.stations[req.StationId]
+	station, ok := s.stations[strings.TrimSpace(req.StationId)]
 	s.mu.RUnlock()
 	if !ok {
 		return nil, status.Error(codes.NotFound, "station not found")
@@ -136,4 +149,23 @@ func newID(prefix string) string {
 	buf := make([]byte, 8)
 	_, _ = rand.Read(buf)
 	return prefix + "_" + hex.EncodeToString(buf)
+}
+
+func validateLatLng(latlng *lastmilev1.LatLng) error {
+	if latlng == nil {
+		return status.Error(codes.InvalidArgument, "location is required")
+	}
+	if math.IsNaN(latlng.Latitude) || math.IsNaN(latlng.Longitude) {
+		return status.Error(codes.InvalidArgument, "location has invalid coordinates")
+	}
+	if math.IsInf(latlng.Latitude, 0) || math.IsInf(latlng.Longitude, 0) {
+		return status.Error(codes.InvalidArgument, "location has invalid coordinates")
+	}
+	if latlng.Latitude < -90 || latlng.Latitude > 90 {
+		return status.Error(codes.InvalidArgument, "latitude out of range")
+	}
+	if latlng.Longitude < -180 || latlng.Longitude > 180 {
+		return status.Error(codes.InvalidArgument, "longitude out of range")
+	}
+	return nil
 }

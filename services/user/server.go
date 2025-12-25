@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"strings"
 	"sync"
 
 	lastmilev1 "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1"
@@ -30,8 +31,22 @@ func (s *Server) CreateRiderProfile(_ context.Context, req *lastmilev1.CreateRid
 		return nil, status.Error(codes.InvalidArgument, "profile is required")
 	}
 	profile := cloneRiderProfile(req.Profile)
-	if profile.RiderId == "" {
+	name := strings.TrimSpace(profile.Name)
+	if name == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+	phone := strings.TrimSpace(profile.Phone)
+	if phone == "" {
+		return nil, status.Error(codes.InvalidArgument, "phone is required")
+	}
+	profile.Name = name
+	profile.Phone = phone
+
+	riderID := strings.TrimSpace(profile.RiderId)
+	if riderID == "" {
 		profile.RiderId = newID("rider")
+	} else {
+		profile.RiderId = riderID
 	}
 
 	s.mu.Lock()
@@ -49,8 +64,27 @@ func (s *Server) CreateDriverProfile(_ context.Context, req *lastmilev1.CreateDr
 		return nil, status.Error(codes.InvalidArgument, "profile is required")
 	}
 	profile := cloneDriverProfile(req.Profile)
-	if profile.DriverId == "" {
+	name := strings.TrimSpace(profile.Name)
+	if name == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+	phone := strings.TrimSpace(profile.Phone)
+	if phone == "" {
+		return nil, status.Error(codes.InvalidArgument, "phone is required")
+	}
+	vehicleID := strings.TrimSpace(profile.VehicleId)
+	if vehicleID == "" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_id is required")
+	}
+	profile.Name = name
+	profile.Phone = phone
+	profile.VehicleId = vehicleID
+
+	driverID := strings.TrimSpace(profile.DriverId)
+	if driverID == "" {
 		profile.DriverId = newID("driver")
+	} else {
+		profile.DriverId = driverID
 	}
 
 	s.mu.Lock()
@@ -64,12 +98,12 @@ func (s *Server) CreateDriverProfile(_ context.Context, req *lastmilev1.CreateDr
 }
 
 func (s *Server) GetRiderProfile(_ context.Context, req *lastmilev1.GetRiderProfileRequest) (*lastmilev1.GetRiderProfileResponse, error) {
-	if req == nil || req.RiderId == "" {
+	if req == nil || strings.TrimSpace(req.RiderId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "rider_id is required")
 	}
 
 	s.mu.RLock()
-	profile, ok := s.riders[req.RiderId]
+	profile, ok := s.riders[strings.TrimSpace(req.RiderId)]
 	s.mu.RUnlock()
 	if !ok {
 		return nil, status.Error(codes.NotFound, "rider not found")
@@ -79,12 +113,12 @@ func (s *Server) GetRiderProfile(_ context.Context, req *lastmilev1.GetRiderProf
 }
 
 func (s *Server) GetDriverProfile(_ context.Context, req *lastmilev1.GetDriverProfileRequest) (*lastmilev1.GetDriverProfileResponse, error) {
-	if req == nil || req.DriverId == "" {
+	if req == nil || strings.TrimSpace(req.DriverId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
 	}
 
 	s.mu.RLock()
-	profile, ok := s.drivers[req.DriverId]
+	profile, ok := s.drivers[strings.TrimSpace(req.DriverId)]
 	s.mu.RUnlock()
 	if !ok {
 		return nil, status.Error(codes.NotFound, "driver not found")

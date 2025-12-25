@@ -57,11 +57,9 @@ Health checks:
 No build/test/run scripts exist yet for services. Once code lands, keep a minimal command surface (for example, `make build`, `make test`, `make run`) and document the exact commands here.
 
 ## Next Build Steps (choose one)
-- Kubernetes manifests for one service (Deployment + Service + HPA + probes).
-- Service config expansion (env validation + `.env.example` for local dev).
-- Basic logging + request tracing interceptors (gRPC + HTTP).
-- Storage wiring stubs (MongoDB + Redis clients in `internal/`).
-- Minimal service logic (start with User + Station CRUD).
+- Introduce storage interfaces + in-memory implementations for easier testing.
+- Wire readiness checks to backing stores when enabled (Mongo/Redis ping).
+- Add CI lint/test workflow (go test + buf lint + gofmt check).
 
 Observability:
 - gRPC uses OpenTelemetry stats handler + logging interceptors.
@@ -70,6 +68,14 @@ Observability:
 Minimal service logic (in-memory):
 - `UserService` supports Create/Get for rider and driver profiles (IDs auto-generated if missing).
 - `StationService` supports Upsert/Get/List with simple offset pagination (`page_token` as offset string).
+- User/Station handlers validate required fields and trim whitespace; Station validates lat/lng ranges.
+
+## Next Steps (quality-first)
+- Add request validation + unit tests for User/Station handlers.
+- Introduce interfaces for storage + in-memory implementations to enable mocking.
+- Wire readiness checks to backing stores when they are enabled (Mongo/Redis ping).
+- Add structured logging (zap/zerolog) with request IDs and trace IDs.
+- Add CI lint/test workflow (go test + buf lint + gofmt check).
 
 ## Coding Style & Naming Conventions
 Use standard formatters (`gofmt`, `prettier`) and keep service names aligned to the spec (`user`, `driver`, `rider`, `matching`, `trip`, `notification`, `location`, `station`). Prefer lowercase directory names such as `services/rider/`.
