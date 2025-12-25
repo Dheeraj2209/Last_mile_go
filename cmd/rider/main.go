@@ -59,11 +59,29 @@ func main() {
 		}
 	}()
 
+	ready, err := server.ReadyChecksFromConfig(ctx, cfg, log.Printf)
+	if err != nil {
+		log.Fatalf("rider readiness init failed: %v", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		for _, closer := range ready.Closers {
+			if closer == nil {
+				continue
+			}
+			if err := closer(shutdownCtx); err != nil {
+				log.Printf("rider readiness close error: %v", err)
+			}
+		}
+	}()
+
 	err = server.Run(ctx, cfg.GRPCListenAddr, cfg.GRPCEndpoint, cfg.HTTPAddr,
 		func(grpcServer *grpc.Server) {
 			lastmilev1.RegisterRiderServiceServer(grpcServer, rider.NewServer())
 		},
 		lastmilev1.RegisterRiderServiceHandlerFromEndpoint,
+		ready.Checks...,
 	)
 	if err != nil {
 		log.Fatalf("rider service stopped: %v", err)

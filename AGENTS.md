@@ -14,6 +14,7 @@ Go module path: `github.com/Dheeraj2209/Last_mile_go`. Protos reference generate
 
 ## Stack & Setup Commands
 Required stack (from `project-statement/early-idea.txt`): Go 1.22, grpc-go, buf, grpc-gateway + `protoc-gen-openapiv2`, OpenTelemetry, MongoDB, Redis, Vault + External Secrets Operator, and Kubernetes manifests with HPA. Loki + Grafana are expected for logging/observability.
+Note: `go.mod` currently requires Go `1.25.5`+. If you want to align to 1.22, update `go.mod` and dependencies accordingly.
 
 Suggested local tooling installs:
 - `go version` should report `go1.22.x`.
@@ -53,6 +54,7 @@ Storage clients:
 Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
 - HTTP: `GET /healthz` and `GET /readyz` return `200 OK`.
+- `/readyz` pings Mongo/Redis when `MONGO_URI` or `REDIS_ADDR` are set (otherwise always OK).
 
 Kubernetes (user service only so far):
 - Apply just user: `kubectl apply -k deploy/k8s/user`
@@ -61,10 +63,11 @@ Docker build (user service):
 - Build: `docker build -t lastmile/user:latest -f cmd/user/Dockerfile .`
 
 No build/test/run scripts exist yet for services. Once code lands, keep a minimal command surface (for example, `make build`, `make test`, `make run`) and document the exact commands here.
+CI:
+- GitHub Actions workflow runs `gofmt -l`, `buf lint`, and `go test ./...`.
 
 ## Next Build Steps (choose one)
-- Wire readiness checks to backing stores when enabled (Mongo/Redis ping).
-- Add CI lint/test workflow (go test + buf lint + gofmt check).
+- Add structured logging (zap/zerolog) with request + trace IDs.
 
 Observability:
 - gRPC uses OpenTelemetry stats handler + logging interceptors.
@@ -77,11 +80,7 @@ Minimal service logic (in-memory):
 - User/Station default to in-memory storage interfaces in `internal/storage` (swappable for real backends).
 
 ## Next Steps (quality-first)
-- Add request validation + unit tests for User/Station handlers.
-- Introduce interfaces for storage + in-memory implementations to enable mocking.
-- Wire readiness checks to backing stores when they are enabled (Mongo/Redis ping).
 - Add structured logging (zap/zerolog) with request IDs and trace IDs.
-- Add CI lint/test workflow (go test + buf lint + gofmt check).
 
 ## Coding Style & Naming Conventions
 Use standard formatters (`gofmt`, `prettier`) and keep service names aligned to the spec (`user`, `driver`, `rider`, `matching`, `trip`, `notification`, `location`, `station`). Prefer lowercase directory names such as `services/rider/`.

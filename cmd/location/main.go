@@ -59,11 +59,29 @@ func main() {
 		}
 	}()
 
+	ready, err := server.ReadyChecksFromConfig(ctx, cfg, log.Printf)
+	if err != nil {
+		log.Fatalf("location readiness init failed: %v", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		for _, closer := range ready.Closers {
+			if closer == nil {
+				continue
+			}
+			if err := closer(shutdownCtx); err != nil {
+				log.Printf("location readiness close error: %v", err)
+			}
+		}
+	}()
+
 	err = server.Run(ctx, cfg.GRPCListenAddr, cfg.GRPCEndpoint, cfg.HTTPAddr,
 		func(grpcServer *grpc.Server) {
 			lastmilev1.RegisterLocationServiceServer(grpcServer, location.NewServer())
 		},
 		lastmilev1.RegisterLocationServiceHandlerFromEndpoint,
+		ready.Checks...,
 	)
 	if err != nil {
 		log.Fatalf("location service stopped: %v", err)

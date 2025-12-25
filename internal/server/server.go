@@ -20,7 +20,7 @@ type GRPCRegistrar func(*grpc.Server)
 
 type GatewayRegistrar func(context.Context, *runtime.ServeMux, string, []grpc.DialOption) error
 
-func Run(ctx context.Context, grpcListenAddr, grpcEndpoint, httpAddr string, registerGRPC GRPCRegistrar, registerGateway GatewayRegistrar) error {
+func Run(ctx context.Context, grpcListenAddr, grpcEndpoint, httpAddr string, registerGRPC GRPCRegistrar, registerGateway GatewayRegistrar, readyChecks ...ReadyCheck) error {
 	listener, err := net.Listen("tcp", grpcListenAddr)
 	if err != nil {
 		return err
@@ -55,7 +55,22 @@ func Run(ctx context.Context, grpcListenAddr, grpcEndpoint, httpAddr string, reg
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if len(readyChecks) == 0 {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		checkCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		for _, check := range readyChecks {
+			if check == nil {
+				continue
+			}
+			if err := check(checkCtx); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusOK)
 	})
 
