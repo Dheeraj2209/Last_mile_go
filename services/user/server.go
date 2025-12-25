@@ -4,29 +4,39 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"strings"
-	"sync"
 
 	lastmilev1 "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1"
+	"github.com/Dheeraj2209/Last_mile_go/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type Server struct {
 	lastmilev1.UnimplementedUserServiceServer
-	mu      sync.RWMutex
-	riders  map[string]*lastmilev1.RiderProfile
-	drivers map[string]*lastmilev1.DriverProfile
+	riders  storage.RiderStore
+	drivers storage.DriverStore
 }
 
 func NewServer() *Server {
+	mem := storage.NewMemoryUserStore()
+	return NewServerWithStores(mem, mem)
+}
+
+func NewServerWithStores(riders storage.RiderStore, drivers storage.DriverStore) *Server {
+	if riders == nil || drivers == nil {
+		mem := storage.NewMemoryUserStore()
+		riders = mem
+		drivers = mem
+	}
 	return &Server{
-		riders:  make(map[string]*lastmilev1.RiderProfile),
-		drivers: make(map[string]*lastmilev1.DriverProfile),
+		riders:  riders,
+		drivers: drivers,
 	}
 }
 
-func (s *Server) CreateRiderProfile(_ context.Context, req *lastmilev1.CreateRiderProfileRequest) (*lastmilev1.CreateRiderProfileResponse, error) {
+func (s *Server) CreateRiderProfile(ctx context.Context, req *lastmilev1.CreateRiderProfileRequest) (*lastmilev1.CreateRiderProfileResponse, error) {
 	if req == nil || req.Profile == nil {
 		return nil, status.Error(codes.InvalidArgument, "profile is required")
 	}
@@ -49,17 +59,20 @@ func (s *Server) CreateRiderProfile(_ context.Context, req *lastmilev1.CreateRid
 		profile.RiderId = riderID
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, exists := s.riders[profile.RiderId]; exists {
-		return nil, status.Error(codes.AlreadyExists, "rider already exists")
+	if err := s.riders.CreateRider(ctx, profile); err != nil {
+		if errors.Is(err, storage.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, "rider already exists")
+		}
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
-	s.riders[profile.RiderId] = profile
 
 	return &lastmilev1.CreateRiderProfileResponse{Profile: cloneRiderProfile(profile)}, nil
 }
 
-func (s *Server) CreateDriverProfile(_ context.Context, req *lastmilev1.CreateDriverProfileRequest) (*lastmilev1.CreateDriverProfileResponse, error) {
+func (s *Server) CreateDriverProfile(ctx context.Context, req *lastmilev1.CreateDriverProfileRequest) (*lastmilev1.CreateDriverProfileResponse, error) {
 	if req == nil || req.Profile == nil {
 		return nil, status.Error(codes.InvalidArgument, "profile is required")
 	}
@@ -87,41 +100,52 @@ func (s *Server) CreateDriverProfile(_ context.Context, req *lastmilev1.CreateDr
 		profile.DriverId = driverID
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, exists := s.drivers[profile.DriverId]; exists {
-		return nil, status.Error(codes.AlreadyExists, "driver already exists")
+	if err := s.drivers.CreateDriver(ctx, profile); err != nil {
+		if errors.Is(err, storage.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, "driver already exists")
+		}
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
-	s.drivers[profile.DriverId] = profile
 
 	return &lastmilev1.CreateDriverProfileResponse{Profile: cloneDriverProfile(profile)}, nil
 }
 
-func (s *Server) GetRiderProfile(_ context.Context, req *lastmilev1.GetRiderProfileRequest) (*lastmilev1.GetRiderProfileResponse, error) {
+func (s *Server) GetRiderProfile(ctx context.Context, req *lastmilev1.GetRiderProfileRequest) (*lastmilev1.GetRiderProfileResponse, error) {
 	if req == nil || strings.TrimSpace(req.RiderId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "rider_id is required")
 	}
 
-	s.mu.RLock()
-	profile, ok := s.riders[strings.TrimSpace(req.RiderId)]
-	s.mu.RUnlock()
-	if !ok {
-		return nil, status.Error(codes.NotFound, "rider not found")
+	profile, err := s.riders.GetRider(ctx, strings.TrimSpace(req.RiderId))
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "rider not found")
+		}
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
 
 	return &lastmilev1.GetRiderProfileResponse{Profile: cloneRiderProfile(profile)}, nil
 }
 
-func (s *Server) GetDriverProfile(_ context.Context, req *lastmilev1.GetDriverProfileRequest) (*lastmilev1.GetDriverProfileResponse, error) {
+func (s *Server) GetDriverProfile(ctx context.Context, req *lastmilev1.GetDriverProfileRequest) (*lastmilev1.GetDriverProfileResponse, error) {
 	if req == nil || strings.TrimSpace(req.DriverId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
 	}
 
-	s.mu.RLock()
-	profile, ok := s.drivers[strings.TrimSpace(req.DriverId)]
-	s.mu.RUnlock()
-	if !ok {
-		return nil, status.Error(codes.NotFound, "driver not found")
+	profile, err := s.drivers.GetDriver(ctx, strings.TrimSpace(req.DriverId))
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "driver not found")
+		}
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
 
 	return &lastmilev1.GetDriverProfileResponse{Profile: cloneDriverProfile(profile)}, nil

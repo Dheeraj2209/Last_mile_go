@@ -4,28 +4,34 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	lastmilev1 "github.com/Dheeraj2209/Last_mile_go/gen/go/lastmile/v1"
+	"github.com/Dheeraj2209/Last_mile_go/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type Server struct {
 	lastmilev1.UnimplementedStationServiceServer
-	mu       sync.RWMutex
-	stations map[string]*lastmilev1.Station
+	store storage.StationStore
 }
 
 func NewServer() *Server {
-	return &Server{stations: make(map[string]*lastmilev1.Station)}
+	return NewServerWithStore(storage.NewMemoryStationStore())
 }
 
-func (s *Server) UpsertStation(_ context.Context, req *lastmilev1.UpsertStationRequest) (*lastmilev1.UpsertStationResponse, error) {
+func NewServerWithStore(store storage.StationStore) *Server {
+	if store == nil {
+		store = storage.NewMemoryStationStore()
+	}
+	return &Server{store: store}
+}
+
+func (s *Server) UpsertStation(ctx context.Context, req *lastmilev1.UpsertStationRequest) (*lastmilev1.UpsertStationResponse, error) {
 	if req == nil || req.Station == nil {
 		return nil, status.Error(codes.InvalidArgument, "station is required")
 	}
@@ -45,32 +51,42 @@ func (s *Server) UpsertStation(_ context.Context, req *lastmilev1.UpsertStationR
 		station.StationId = stationID
 	}
 
-	s.mu.Lock()
-	s.stations[station.StationId] = station
-	s.mu.Unlock()
+	if err := s.store.Upsert(ctx, station); err != nil {
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
+	}
 
 	return &lastmilev1.UpsertStationResponse{Station: cloneStation(station)}, nil
 }
 
-func (s *Server) GetStation(_ context.Context, req *lastmilev1.GetStationRequest) (*lastmilev1.GetStationResponse, error) {
+func (s *Server) GetStation(ctx context.Context, req *lastmilev1.GetStationRequest) (*lastmilev1.GetStationResponse, error) {
 	if req == nil || strings.TrimSpace(req.StationId) == "" {
 		return nil, status.Error(codes.InvalidArgument, "station_id is required")
 	}
 
-	s.mu.RLock()
-	station, ok := s.stations[strings.TrimSpace(req.StationId)]
-	s.mu.RUnlock()
-	if !ok {
-		return nil, status.Error(codes.NotFound, "station not found")
+	station, err := s.store.Get(ctx, strings.TrimSpace(req.StationId))
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "station not found")
+		}
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
 
 	return &lastmilev1.GetStationResponse{Station: cloneStation(station)}, nil
 }
 
-func (s *Server) ListStations(_ context.Context, req *lastmilev1.ListStationsRequest) (*lastmilev1.ListStationsResponse, error) {
+func (s *Server) ListStations(ctx context.Context, req *lastmilev1.ListStationsRequest) (*lastmilev1.ListStationsResponse, error) {
 	pageSize := int32(50)
 	pageToken := "0"
 	if req != nil {
+		if req.PageSize < 0 {
+			return nil, status.Error(codes.InvalidArgument, "page_size must be positive")
+		}
 		if req.PageSize > 0 {
 			pageSize = req.PageSize
 		}
@@ -90,33 +106,17 @@ func (s *Server) ListStations(_ context.Context, req *lastmilev1.ListStationsReq
 		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 
-	s.mu.RLock()
-	ids := make([]string, 0, len(s.stations))
-	for id := range s.stations {
-		ids = append(ids, id)
+	stations, nextOffset, err := s.store.List(ctx, offset, int(pageSize))
+	if err != nil {
+		if errors.Is(err, storage.ErrInvalidArgument) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "storage error")
 	}
-	s.mu.RUnlock()
-
-	sort.Strings(ids)
-	if offset >= len(ids) {
-		return &lastmilev1.ListStationsResponse{Stations: nil, NextPageToken: ""}, nil
-	}
-
-	end := offset + int(pageSize)
-	if end > len(ids) {
-		end = len(ids)
-	}
-
-	stations := make([]*lastmilev1.Station, 0, end-offset)
-	s.mu.RLock()
-	for _, id := range ids[offset:end] {
-		stations = append(stations, cloneStation(s.stations[id]))
-	}
-	s.mu.RUnlock()
 
 	nextToken := ""
-	if end < len(ids) {
-		nextToken = strconv.Itoa(end)
+	if nextOffset >= 0 {
+		nextToken = strconv.Itoa(nextOffset)
 	}
 
 	return &lastmilev1.ListStationsResponse{Stations: stations, NextPageToken: nextToken}, nil

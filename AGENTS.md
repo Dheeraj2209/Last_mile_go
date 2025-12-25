@@ -54,10 +54,15 @@ Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
 - HTTP: `GET /healthz` and `GET /readyz` return `200 OK`.
 
+Kubernetes (user service only so far):
+- Apply just user: `kubectl apply -k deploy/k8s/user`
+- Apply all services (currently only user): `kubectl apply -k deploy/k8s`
+Docker build (user service):
+- Build: `docker build -t lastmile/user:latest -f cmd/user/Dockerfile .`
+
 No build/test/run scripts exist yet for services. Once code lands, keep a minimal command surface (for example, `make build`, `make test`, `make run`) and document the exact commands here.
 
 ## Next Build Steps (choose one)
-- Introduce storage interfaces + in-memory implementations for easier testing.
 - Wire readiness checks to backing stores when enabled (Mongo/Redis ping).
 - Add CI lint/test workflow (go test + buf lint + gofmt check).
 
@@ -69,6 +74,7 @@ Minimal service logic (in-memory):
 - `UserService` supports Create/Get for rider and driver profiles (IDs auto-generated if missing).
 - `StationService` supports Upsert/Get/List with simple offset pagination (`page_token` as offset string).
 - User/Station handlers validate required fields and trim whitespace; Station validates lat/lng ranges.
+- User/Station default to in-memory storage interfaces in `internal/storage` (swappable for real backends).
 
 ## Next Steps (quality-first)
 - Add request validation + unit tests for User/Station handlers.
