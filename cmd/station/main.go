@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -12,7 +13,10 @@ import (
 	"github.com/Dheeraj2209/Last_mile_go/internal/config"
 	"github.com/Dheeraj2209/Last_mile_go/internal/observability"
 	"github.com/Dheeraj2209/Last_mile_go/internal/server"
+	"github.com/Dheeraj2209/Last_mile_go/internal/storage"
 	"github.com/Dheeraj2209/Last_mile_go/services/station"
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 )
 
@@ -62,10 +66,38 @@ func main() {
 		}
 	}()
 
-	ready, err := server.ReadyChecksFromConfig(ctx, cfg, observability.Logf())
-	if err != nil {
-		logger.Fatal().Err(err).Msg("readiness init failed")
+	var store storage.StationStore
+	var mongoClient *mongo.Client
+	var redisClient *redis.Client
+	stationBackend := strings.ToLower(strings.TrimSpace(cfg.StationStoreBackend))
+	switch stationBackend {
+	case "", "memory":
+		store = storage.NewMemoryStationStore()
+	case "mongo":
+		client, err := storage.NewMongoClient(ctx, cfg.Mongo)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to init mongo client")
+		}
+		mongoClient = client
+		store = storage.NewMongoStationStore(client, cfg.MongoDatabase, cfg.MongoStationCollection)
+		if store == nil {
+			logger.Fatal().Msg("mongo station store init failed")
+		}
+	case "redis":
+		client, err := storage.NewRedisClient(ctx, cfg.Redis)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to init redis client")
+		}
+		redisClient = client
+		store = storage.NewRedisStationStore(client, cfg.Redis.KeyPrefix)
+		if store == nil {
+			logger.Fatal().Msg("redis station store init failed")
+		}
+	default:
+		logger.Fatal().Str("backend", stationBackend).Msg("unsupported station store backend")
 	}
+
+	ready := server.ReadyChecksFromClients(mongoClient, redisClient, observability.Logf())
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -81,7 +113,7 @@ func main() {
 
 	err = server.Run(ctx, cfg.GRPCListenAddr, cfg.GRPCEndpoint, cfg.HTTPAddr,
 		func(grpcServer *grpc.Server) {
-			lastmilev1.RegisterStationServiceServer(grpcServer, station.NewServer())
+			lastmilev1.RegisterStationServiceServer(grpcServer, station.NewServerWithStore(store))
 		},
 		lastmilev1.RegisterStationServiceHandlerFromEndpoint,
 		ready.Checks...,

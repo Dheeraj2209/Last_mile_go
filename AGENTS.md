@@ -43,14 +43,20 @@ Runtime configuration (env or flags):
 - `OTEL_EXPORTER_OTLP_ENDPOINT` / `--otel-endpoint` (default empty, enables OTLP)
 - `OTEL_EXPORTER_OTLP_INSECURE` / `--otel-insecure` (default `true`)
 - `LOG_LEVEL` / `--log-level` (default `info`)
+- `USER_STORE_BACKEND` (default `memory`), `STATION_STORE_BACKEND` (default `memory`)
 - `.env.example` contains local defaults (copy to `.env` if needed).
-Note: `.env` usage is optional for now; can be added later if needed.
+Note: `.env` is auto-loaded at startup if present (does not override existing env).
 
 Storage configuration (optional until services wire them in):
 - `MONGO_URI`, `MONGO_TIMEOUT` (default `10s`)
 - `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (default `0`), `REDIS_TIMEOUT` (default `5s`)
+Store config:
+- `MONGO_DB`, `MONGO_RIDER_COLLECTION`, `MONGO_DRIVER_COLLECTION`, `MONGO_STATION_COLLECTION`
+- `REDIS_KEY_PREFIX`
 Storage clients:
 - `NewMongoClient` / `NewRedisClient` return errors when required fields are missing. Services should call them only when they actually need the dependency.
+Stores:
+- User/Station can use `memory`, `mongo`, or `redis` backends via env.
 
 Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
@@ -68,9 +74,9 @@ CI:
 - GitHub Actions workflow runs `gofmt -l`, `buf lint`, `make proto`, and `go test ./...`.
 
 ## Next Build Steps (choose one)
-- Wire Mongo/Redis-backed repositories for User/Station (feature-flag via env).
 - Add Dockerfiles + Kubernetes manifests for Station (mirror user), then for remaining services.
 - Add a local dev `docker-compose` (Mongo, Redis, OTEL collector) and document usage.
+ - Add a small smoke-test script (grpcurl + curl) and document expected outputs.
 
 Observability:
 - gRPC uses OpenTelemetry stats handler + logging interceptors.

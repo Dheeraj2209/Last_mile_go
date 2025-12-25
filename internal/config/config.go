@@ -19,29 +19,45 @@ type Config struct {
 	OTelInsecure   bool
 	LogLevel       string
 
+	UserStoreBackend    string
+	StationStoreBackend string
+
 	Mongo storage.MongoConfig
 	Redis storage.RedisConfig
+
+	MongoDatabase          string
+	MongoRiderCollection   string
+	MongoDriverCollection  string
+	MongoStationCollection string
 }
 
 func Load(serviceName string) Config {
+	loadDotEnv()
 	return Config{
-		ServiceName:    serviceName,
-		GRPCListenAddr: getEnv("GRPC_LISTEN_ADDR", ":9090"),
-		GRPCEndpoint:   getEnv("GRPC_ENDPOINT", "localhost:9090"),
-		HTTPAddr:       getEnv("HTTP_ADDR", ":8080"),
-		OTelEndpoint:   os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
-		OTelInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
-		LogLevel:       getEnv("LOG_LEVEL", "info"),
+		ServiceName:         serviceName,
+		GRPCListenAddr:      getEnv("GRPC_LISTEN_ADDR", ":9090"),
+		GRPCEndpoint:        getEnv("GRPC_ENDPOINT", "localhost:9090"),
+		HTTPAddr:            getEnv("HTTP_ADDR", ":8080"),
+		OTelEndpoint:        os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+		OTelInsecure:        getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+		LogLevel:            getEnv("LOG_LEVEL", "info"),
+		UserStoreBackend:    getEnv("USER_STORE_BACKEND", "memory"),
+		StationStoreBackend: getEnv("STATION_STORE_BACKEND", "memory"),
 		Mongo: storage.MongoConfig{
 			URI:     os.Getenv("MONGO_URI"),
 			Timeout: getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
 		},
 		Redis: storage.RedisConfig{
-			Addr:     os.Getenv("REDIS_ADDR"),
-			Password: os.Getenv("REDIS_PASSWORD"),
-			DB:       getEnvInt("REDIS_DB", 0),
-			Timeout:  getEnvDuration("REDIS_TIMEOUT", 5*time.Second),
+			Addr:      os.Getenv("REDIS_ADDR"),
+			Password:  os.Getenv("REDIS_PASSWORD"),
+			DB:        getEnvInt("REDIS_DB", 0),
+			Timeout:   getEnvDuration("REDIS_TIMEOUT", 5*time.Second),
+			KeyPrefix: getEnv("REDIS_KEY_PREFIX", "lastmile"),
 		},
+		MongoDatabase:          getEnv("MONGO_DB", "lastmile"),
+		MongoRiderCollection:   getEnv("MONGO_RIDER_COLLECTION", "riders"),
+		MongoDriverCollection:  getEnv("MONGO_DRIVER_COLLECTION", "drivers"),
+		MongoStationCollection: getEnv("MONGO_STATION_COLLECTION", "stations"),
 	}
 }
 
@@ -116,13 +132,15 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 }
 
 func FormatConfig(cfg Config) string {
-	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t log_level=%s mongo_uri_set=%t redis_addr_set=%t",
+	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t log_level=%s user_store=%s station_store=%s mongo_uri_set=%t redis_addr_set=%t",
 		cfg.GRPCListenAddr,
 		cfg.GRPCEndpoint,
 		cfg.HTTPAddr,
 		cfg.OTelEndpoint,
 		cfg.OTelInsecure,
 		cfg.LogLevel,
+		cfg.UserStoreBackend,
+		cfg.StationStoreBackend,
 		cfg.Mongo.URI != "",
 		cfg.Redis.Addr != "",
 	)
