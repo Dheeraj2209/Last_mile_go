@@ -41,12 +41,25 @@ Runtime configuration (env or flags):
 - `HTTP_ADDR` / `--http-addr` (default `:8080`)
 - `OTEL_EXPORTER_OTLP_ENDPOINT` / `--otel-endpoint` (default empty, enables OTLP)
 - `OTEL_EXPORTER_OTLP_INSECURE` / `--otel-insecure` (default `true`)
+- `.env.example` contains local defaults (copy to `.env` if needed).
+Note: `.env` usage is optional for now; can be added later if needed.
 
 Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
 - HTTP: `GET /healthz` and `GET /readyz` return `200 OK`.
 
 No build/test/run scripts exist yet for services. Once code lands, keep a minimal command surface (for example, `make build`, `make test`, `make run`) and document the exact commands here.
+
+## Next Build Steps (choose one)
+- Kubernetes manifests for one service (Deployment + Service + HPA + probes).
+- Service config expansion (env validation + `.env.example` for local dev).
+- Basic logging + request tracing interceptors (gRPC + HTTP).
+- Storage wiring stubs (MongoDB + Redis clients in `internal/`).
+- Minimal service logic (start with User + Station CRUD).
+
+Observability:
+- gRPC uses OpenTelemetry stats handler + logging interceptors.
+- HTTP requests are wrapped with tracing + access logs.
 
 ## Coding Style & Naming Conventions
 Use standard formatters (`gofmt`, `prettier`) and keep service names aligned to the spec (`user`, `driver`, `rider`, `matching`, `trip`, `notification`, `location`, `station`). Prefer lowercase directory names such as `services/rider/`.

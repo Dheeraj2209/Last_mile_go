@@ -18,3 +18,4 @@ project-statement/
 .DS_Store
 .idea/
 .vscode/
+.env

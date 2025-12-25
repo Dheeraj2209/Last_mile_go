@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type ShutdownFunc func(context.Context) error
@@ -21,6 +22,7 @@ func Setup(ctx context.Context, serviceName, endpoint string, insecure bool) (Sh
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			attribute.String("service.name", serviceName),
+			semconv.ServiceName(serviceName),
 		),
 	)
 	if err != nil {

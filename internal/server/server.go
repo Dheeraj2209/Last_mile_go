@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Dheeraj2209/Last_mile_go/internal/observability"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -25,7 +26,7 @@ func Run(ctx context.Context, grpcListenAddr, grpcEndpoint, httpAddr string, reg
 		return err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(observability.GRPCServerOptions()...)
 	healthServer := health.NewServer()
 	healthServer.SetServingStatus("", healthgrpc.HealthCheckResponse_SERVING)
 	healthgrpc.RegisterHealthServer(grpcServer, healthServer)
@@ -50,7 +51,7 @@ func Run(ctx context.Context, grpcListenAddr, grpcEndpoint, httpAddr string, reg
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", gatewayMux)
+	mux.Handle("/", observability.HTTPMiddlewareChain()(gatewayMux))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

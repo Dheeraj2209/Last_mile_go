@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -15,7 +17,7 @@ type Config struct {
 }
 
 func Load(serviceName string) Config {
-	cfg := Config{
+	return Config{
 		ServiceName:    serviceName,
 		GRPCListenAddr: getEnv("GRPC_LISTEN_ADDR", ":9090"),
 		GRPCEndpoint:   getEnv("GRPC_ENDPOINT", "localhost:9090"),
@@ -23,7 +25,26 @@ func Load(serviceName string) Config {
 		OTelEndpoint:   os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 		OTelInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
 	}
-	return cfg
+}
+
+func Validate(cfg Config) error {
+	var errs []error
+	if cfg.ServiceName == "" {
+		errs = append(errs, errors.New("SERVICE_NAME is required"))
+	}
+	if cfg.GRPCListenAddr == "" {
+		errs = append(errs, errors.New("GRPC_LISTEN_ADDR is required"))
+	}
+	if cfg.GRPCEndpoint == "" {
+		errs = append(errs, errors.New("GRPC_ENDPOINT is required"))
+	}
+	if cfg.HTTPAddr == "" {
+		errs = append(errs, errors.New("HTTP_ADDR is required"))
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
 }
 
 func getEnv(key, fallback string) string {
@@ -44,4 +65,14 @@ func getEnvBool(key string, fallback bool) bool {
 		return fallback
 	}
 	return parsed
+}
+
+func FormatConfig(cfg Config) string {
+	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t",
+		cfg.GRPCListenAddr,
+		cfg.GRPCEndpoint,
+		cfg.HTTPAddr,
+		cfg.OTelEndpoint,
+		cfg.OTelInsecure,
+	)
 }

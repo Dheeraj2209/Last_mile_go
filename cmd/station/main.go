@@ -39,6 +39,11 @@ func main() {
 	cfg.OTelEndpoint = otelEndpoint
 	cfg.OTelInsecure = otelInsecure
 
+	if err := config.Validate(cfg); err != nil {
+		log.Fatalf("station invalid configuration: %v", err)
+	}
+	log.Printf("station config: %s", config.FormatConfig(cfg))
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
