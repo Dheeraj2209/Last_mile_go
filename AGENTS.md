@@ -44,6 +44,10 @@ Runtime configuration (env or flags):
 - `.env.example` contains local defaults (copy to `.env` if needed).
 Note: `.env` usage is optional for now; can be added later if needed.
 
+Storage configuration (optional until services wire them in):
+- `MONGO_URI`, `MONGO_TIMEOUT` (default `10s`)
+- `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (default `0`), `REDIS_TIMEOUT` (default `5s`)
+
 Health checks:
 - gRPC health service enabled (standard `grpc.health.v1.Health`).
 - HTTP: `GET /healthz` and `GET /readyz` return `200 OK`.

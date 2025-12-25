@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
+
+	"github.com/Dheeraj2209/Last_mile_go/internal/storage"
 )
 
 type Config struct {
@@ -14,6 +17,9 @@ type Config struct {
 	HTTPAddr       string
 	OTelEndpoint   string
 	OTelInsecure   bool
+
+	Mongo storage.MongoConfig
+	Redis storage.RedisConfig
 }
 
 func Load(serviceName string) Config {
@@ -24,6 +30,16 @@ func Load(serviceName string) Config {
 		HTTPAddr:       getEnv("HTTP_ADDR", ":8080"),
 		OTelEndpoint:   os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 		OTelInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+		Mongo: storage.MongoConfig{
+			URI:     os.Getenv("MONGO_URI"),
+			Timeout: getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
+		},
+		Redis: storage.RedisConfig{
+			Addr:     os.Getenv("REDIS_ADDR"),
+			Password: os.Getenv("REDIS_PASSWORD"),
+			DB:       getEnvInt("REDIS_DB", 0),
+			Timeout:  getEnvDuration("REDIS_TIMEOUT", 5*time.Second),
+		},
 	}
 }
 
@@ -40,6 +56,12 @@ func Validate(cfg Config) error {
 	}
 	if cfg.HTTPAddr == "" {
 		errs = append(errs, errors.New("HTTP_ADDR is required"))
+	}
+	if cfg.Mongo.URI == "" {
+		// optional for now; no validation
+	}
+	if cfg.Redis.Addr == "" {
+		// optional for now; no validation
 	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
@@ -67,12 +89,38 @@ func getEnvBool(key string, fallback bool) bool {
 	return parsed
 }
 
+func getEnvInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
 func FormatConfig(cfg Config) string {
-	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t",
+	return fmt.Sprintf("grpc_listen=%s grpc_endpoint=%s http_addr=%s otel_endpoint=%s otel_insecure=%t mongo_uri_set=%t redis_addr_set=%t",
 		cfg.GRPCListenAddr,
 		cfg.GRPCEndpoint,
 		cfg.HTTPAddr,
 		cfg.OTelEndpoint,
 		cfg.OTelInsecure,
+		cfg.Mongo.URI != "",
+		cfg.Redis.Addr != "",
 	)
 }
